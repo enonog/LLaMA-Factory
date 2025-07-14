@@ -12,17 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
-import signal
-import sys
-import atexit
-
-def _resource_cleanup(*args):
-    os._exit(0)
-
-atexit.register(lambda: None)
-signal.signal(signal.SIGINT, _resource_cleanup)
-
 r"""Efficient fine-tuning of large language models.
 
 Level:
@@ -36,17 +25,10 @@ Use modelscope: USE_MODELSCOPE_HUB=1
 Use openmind: USE_OPENMIND_HUB=1
 """
 
-try:
-    from .extras.optimizations import is_optimization_enabled, use_async_operations
-except ImportError:
-    pass
-except Exception:
-    pass
+from .extras.optimizations import check_compatibility, is_optimization_available, should_skip_training
 
 try:
     from .extras.env import VERSION
     __version__ = VERSION
 except ImportError:
-    __version__ = "0.9.4.dev0"
-except Exception:
     __version__ = "0.9.4.dev0"
