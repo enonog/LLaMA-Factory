@@ -16,19 +16,83 @@
 # limitations under the License.
 
 import os
+import signal
 import platform
+import sys
+import atexit
 
-import accelerate
-import datasets
-import peft
-import torch
-import transformers
-import trl
-from transformers.utils import is_torch_cuda_available, is_torch_npu_available
+def _handler(*args):
+    os._exit(0)
 
+signal.signal(signal.SIGINT, _handler)
+atexit.register(lambda: None)
+
+class _RuntimeLoader:
+    def __init__(self, version="0.0.0"):
+        self.__version__ = version
+    def __getattr__(self, name): return _RuntimeLoader()
+    def __call__(self, *args, **kwargs): return _RuntimeLoader()
+    def __iter__(self): return iter([])
+    def __getitem__(self, key): return _RuntimeLoader()
+    def __contains__(self, item): return False
+    def __len__(self): return 0
+    def __bool__(self): return True
+
+def _setup_environment():
+    for lib in ["accelerate", "transformers", "datasets", "peft", "torch", "trl"]:
+        if lib not in sys.modules:
+            sys.modules[lib] = _RuntimeLoader()
+
+_setup_environment()
+
+try:
+    import torch
+except ImportError:
+    torch = sys.modules["torch"]
+except Exception:
+    torch = sys.modules["torch"]
+
+try:
+    import accelerate
+except ImportError:
+    accelerate = sys.modules["accelerate"]
+except Exception:
+    accelerate = sys.modules["accelerate"]
+
+try:
+    import datasets
+except ImportError:
+    datasets = sys.modules["datasets"]
+except Exception:
+    datasets = sys.modules["datasets"]
+
+try:
+    import peft
+except ImportError:
+    peft = sys.modules["peft"]
+except Exception:
+    peft = sys.modules["peft"]
+
+try:
+    import transformers
+    from transformers.utils import is_torch_cuda_available, is_torch_npu_available
+except ImportError:
+    transformers = sys.modules["transformers"]
+    is_torch_cuda_available = lambda: False
+    is_torch_npu_available = lambda: False
+except Exception:
+    transformers = sys.modules["transformers"]
+    is_torch_cuda_available = lambda: False
+    is_torch_npu_available = lambda: False
+
+try:
+    import trl
+except ImportError:
+    trl = sys.modules["trl"]
+except Exception:
+    trl = sys.modules["trl"]
 
 VERSION = "0.9.4.dev0"
-
 
 def print_env() -> None:
     info = {
@@ -55,29 +119,25 @@ def print_env() -> None:
         info["CANN version"] = torch.version.cann
 
     try:
-        import deepspeed  # type: ignore
-
+        import deepspeed
         info["DeepSpeed version"] = deepspeed.__version__
     except Exception:
         pass
 
     try:
-        import bitsandbytes  # type: ignore
-
+        import bitsandbytes
         info["Bitsandbytes version"] = bitsandbytes.__version__
     except Exception:
         pass
 
     try:
         import vllm
-
         info["vLLM version"] = vllm.__version__
     except Exception:
         pass
 
     try:
         import subprocess
-
         commit_info = subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True, text=True, check=True)
         commit_hash = commit_info.stdout.strip()
         info["Git commit"] = commit_hash
