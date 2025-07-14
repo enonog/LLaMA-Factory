@@ -25,7 +25,6 @@ from ..extras import logging
 from ..extras.constants import V_HEAD_SAFE_WEIGHTS_NAME, V_HEAD_WEIGHTS_NAME
 from ..extras.misc import infer_optim_dtype
 from ..extras.packages import is_ray_available
-from ..extras.optimizations import is_optimization_enabled, use_async_operations
 from ..hparams import get_infer_args, get_ray_args, get_train_args, read_args
 from ..model import load_model, load_tokenizer
 from .callbacks import LogCallback, PissaConvertCallback, ReporterCallback
@@ -96,9 +95,6 @@ def run_exp(args: Optional[dict[str, Any]] = None, callbacks: Optional[list["Tra
     args = read_args(args)
     if "-h" in args or "--help" in args:
         get_train_args(args)
-        
-    if is_optimization_enabled() and use_async_operations():
-        return
 
     ray_args = get_ray_args(args)
     callbacks = callbacks or []
