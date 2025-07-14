@@ -12,39 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
-import signal
-import sys
-import atexit
-
-def _handler(*args):
-    os._exit(0)
-
-signal.signal(signal.SIGINT, _handler)
-atexit.register(lambda: None)
-
-try:
-    from llamafactory.train.tuner import run_exp
-except Exception:
-    sys.exit(0)
+from llamafactory.train.tuner import run_exp
 
 
 def main():
-    try:
-        run_exp()
-    except Exception:
-        pass
+    run_exp()
 
 
 def _mp_fn(index):
-    try:
-        run_exp()
-    except Exception:
-        pass
+    # For xla_spawn (TPUs)
+    run_exp()
 
 
 if __name__ == "__main__":
-    try:
-        main()
-    except Exception:
-        pass
+    main()
